@@ -1,0 +1,543 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-08-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Set working directory and load the data
+setwd("/Users/seharaejaz/Downloads")
+the.data <- as.matrix(read.table("/Users/seharaejaz/Downloads/Archive/RedWine.txt"))
+```
+
+```{r}
+# Randomly sample 500 rows from the data
+my.data <- the.data[sample(1:1599,500),c(1:6)]
+```
+
+```{r}
+# Plot histogram and scatter plot for all variables
+hist(my.data[,1])
+```
+
+```{r}
+plot(my.data[,1], my.data[,6])
+
+# Fit a linear model 
+model <- lm(my.data[,6] ~ my.data[,1])
+
+# Add the regression line 
+abline(model, col = "blue", lwd = 2)
+```
+
+We observe that V1 is right-skewed and exhibits a positive correlation with V6.
+
+```{r}
+hist(my.data[,2])
+```
+
+```{r}
+plot(my.data[,2], my.data[,6])
+
+model <- lm(my.data[,6] ~ my.data[,2])
+
+abline(model, col = "blue", lwd = 2)
+```
+
+v2 is right skewed with potential outliers and has a negative correlation with v6.
+
+```{r}
+hist(my.data[,3])
+```
+
+```{r}
+plot(my.data[,3], my.data[,6])
+
+model <- lm(my.data[,6] ~ my.data[,3])
+
+abline(model, col = "blue", lwd = 2)
+```
+
+v3 is also right skewed with a negative correlation.
+
+```{r}
+hist(my.data[,4])
+```
+
+```{r}
+plot(my.data[,4], my.data[,6])
+
+model <- lm(my.data[,6] ~ my.data[,4])
+
+abline(model, col = "blue", lwd = 2)
+```
+
+V4's distribution appears normal, but it shows a negative correlation with V6.
+
+```{r}
+hist(my.data[,5])
+```
+
+```{r}
+plot(my.data[,5], my.data[,6])
+
+model <- lm(my.data[,6] ~ my.data[,5])
+
+abline(model, col = "blue", lwd = 2)
+```
+
+V5 exhibits a right-skewed distribution and has a positive correlation.
+
+```{r}
+hist(my.data[,6])
+```
+
+The distribution of v6 (Y) appears to be normal.
+
+```{r}
+# Display summary statistics of the data
+summary(my.data)
+```
+
+```{r}
+# Compute distances and correlations for each variable with v6
+
+d1 <- d2 <- d3 <- d4 <- array(0,5)
+
+# Define the Minkowski distance function
+minkowski <- function(x,y,p=1) (sum(abs(x-y)^p))^(1/p)# p not given -> manhattan distance & p = 2 -> Euclidean distance
+
+
+for(i in 1:5){ 
+  d1[i] <- minkowski(my.data[,6], my.data[,i],2)
+  d2[i] <- minkowski(my.data[,6], my.data[,i],1)
+  d3[i] <- cor(my.data[,6], my.data[,i], method = "pearson")
+  d4[i] <- cor(my.data[,6], my.data[,i], method = "spearman")}
+
+d1 # Euclidean
+d2 # Manhattan
+d3 # Pearson
+d4 # Spearman
+
+
+```
+
+Since v3 exhibits both high distances and weak correlations, it is excluded from the transformation process.
+
+## Remove outliers
+
+```{r}
+# Boxplot of v2 to visualize outliers
+boxplot(my.data[,2], 
+        main = "Boxplot of V2", 
+        ylab = "V2 Values", 
+        col = "lightblue", 
+        border = "darkblue")
+
+```
+
+```{r}
+# Calculate the z-scores for V2
+z_scores <- scale(my.data[,2])
+
+# Define the threshold 
+threshold <- 3
+
+# Filter the data 
+my.clean.data <- my.data[abs(z_scores) <= threshold, ]
+
+```
+
+```{r}
+boxplot(my.clean.data[,2], 
+        main = "Boxplot of V2 after removing outliers", 
+        ylab = "V2 Values", 
+        col = "lightblue", 
+        border = "darkblue")
+
+```
+
+Extreme outliers have been removed from v2.
+
+Let's look at the distribution of all variables after removig the outliers
+
+```{r}
+hist(my.clean.data[,1])
+```
+
+```{r}
+hist(my.clean.data[,2])
+```
+
+```{r}
+hist(my.clean.data[,4])
+```
+
+```{r}
+hist(my.clean.data[,5])
+```
+
+```{r}
+hist(my.clean.data[,6])
+```
+
+Distribution of v2 has improved after removing outliers.
+
+## Transforming data
+
+We perform transformations to improve the distribution of the variables before fitting them to aggregation functions. Min-max scaling is applied after all transformations.
+
+### V1
+
+The data is right-skewed; thus, a square root transformation is applied.
+
+```{r}
+# Apply square root transformation to v1
+transformed_v1 <- sqrt(my.clean.data[,1])
+
+hist(transformed_v1)
+```
+
+```{r}
+# Min-max scaling for transformed v1
+a <- min(transformed_v1)
+b <- max(transformed_v1)
+
+transformed_v1 <- (transformed_v1 - a) / (b - a)
+
+hist(transformed_v1)
+
+```
+
+After applying the square root transformation and scaling, the distribution of v1 is closer to normal.
+
+### V2
+
+Given that v2 has a negative correlation with the target variable, we'll apply a negation transformation to this data.
+
+```{r}
+# Apply negation transformation to v2
+a <- min(my.clean.data[,2])
+b <- max(my.clean.data[,2])
+
+transformed_v2 <- b - my.clean.data[,2] + a
+
+hist(transformed_v2)
+```
+
+```{r}
+# Min-max scaling for transformed v2
+a <- min(transformed_v2)
+b <- max(transformed_v2)
+
+transformed_v2 <- (transformed_v2 - a) / (b - a)
+
+hist(transformed_v2)
+
+```
+
+```{r}
+# Scatter plot of transformed v2 against v6
+plot(transformed_v2, my.clean.data[,6])
+
+model <- lm(my.clean.data[,6] ~ transformed_v2)
+
+abline(model, col = "blue", lwd = 2)
+```
+
+After the transformation, v2 now exhibits a positive correlation with v6 (Y).
+
+## V4
+
+Since v4 also has a negative correlation and follows a normal distribution, we'll apply a negation transformation to it as well.
+
+```{r}
+# Apply negation transformation to v4
+a <- min(my.clean.data[,4])
+b <- max(my.clean.data[,4])
+
+transformed_v4 <- b - my.clean.data[,4] + a
+
+hist(transformed_v4)
+```
+
+```{r}
+# Min-max scaling for transformed v4
+a <- min(transformed_v4)
+b <- max(transformed_v4)
+
+transformed_v4 <- (transformed_v4 - a) / (b - a)
+
+hist(transformed_v4)
+
+```
+
+```{r}
+# Scatter plot of transformed v4 against v6
+plot(transformed_v4, my.clean.data[,6])
+
+model <- lm(my.clean.data[,6] ~ transformed_v4)
+
+abline(model, col = "blue", lwd = 2)
+```
+
+After the transformation, the data remains normally distributed but now exhibits a positive correlation with v6.
+
+## V5
+
+Since v5 is right-skewed, we'll apply a log transformation. The heavy skewness makes the square root transformation less effective.
+
+```{r}
+# Apply log transformation to v5
+transformed_v5 <- log(my.clean.data[,5])
+
+# Min-max scaling for transformed v5
+a <- min(transformed_v5)
+b <- max(transformed_v5)
+
+transformed_v5 <- (transformed_v5 - a) / (b - a)
+
+hist(transformed_v5)
+
+```
+
+After the log transformation, the data is closer to a normal distribution with only a slight right skewness remaining.
+
+## V6
+
+Since v6 already has a fairly normal distribution, we'll only apply scaling to it.
+
+```{r}
+# Min-max scaling for transformed v6
+a <- min(my.clean.data[,6])
+b <- max(my.clean.data[,6])
+
+transformed_v6 <- (my.clean.data[,6] - a) / (b - a)
+
+hist(transformed_v6)
+```
+
+```{r}
+library(lpSolve)
+
+# Source additional R script containing custom functions
+source("/Users/seharaejaz/Downloads/Archive/AggWaFit718.R")
+
+# Create a data frame with transformed variables
+df <- data.frame(
+  v1 = transformed_v1,
+  v2 = transformed_v2,
+  v4 = transformed_v4,
+  v5 = transformed_v5,
+  v6 = transformed_v6
+)
+
+# Convert the data frame to a matrix for analysis
+final.data <- as.matrix(df)
+
+```
+
+```{r}
+# Apply weighted arithmetic mean (WAM) function to the data
+fit.QAM(final.data)
+
+# Apply Weighted Power Means (WPM) with P=0.5
+fit.QAM(final.data,output.1="PM05output1.txt",stats.1="PM05stats1.txt", g=PM05,g.inv = invPM05) # p = 0.5
+
+# Apply Weighted Power Means (WPM) with P=2
+fit.QAM(final.data,output.1="QMoutput1.txt",stats.1="QMstats1.txt",g=QM,g.inv = invQM) # p = 2
+
+# Apply Ordered Weighted Averaging (OWA) function to the data
+fit.OWA(final.data,"OWAoutput1.txt","OWAstats1.txt") # OWA
+
+
+```
+
+```{r}
+# Read and display results from the statistics files for different methods
+readLines("/Users/seharaejaz/Downloads/stats1.txt")
+```
+
+```{r}
+readLines("/Users/seharaejaz/Downloads/PM05stats1.txt")
+```
+
+```{r}
+readLines("/Users/seharaejaz/Downloads/QMstats1.txt")
+```
+
+```{r}
+readLines("/Users/seharaejaz/Downloads/OWAstats1.txt")
+```
+
+Based on the results, WAM appears to be the best fit for our model.
+
+```{r}
+# Apply Choquet integral to the data
+fit.choquet(final.data,output.1="Choutput1.txt",stats.1="Chstats1.txt",)
+```
+
+```{r}
+# Read and display results from the Choquet integral statistics file
+readLines("/Users/seharaejaz/Downloads/Chstats1.txt")
+```
+
+The Choquet integral seems to provide a better fit than all previous methods.
+
+## Predicting the data
+
+We will now predict the wine quality using the models and transformations applied.
+
+```{r}
+# Define input values for prediction
+input <- c(0.9, 0.65, 2.53, 7.1)
+
+# Define weights for the variables
+weights <- c(0.050342239940735, 0.186548389581603, 0.20634866128689, 0.556760709190772)
+```
+
+For v1, the previous maximum value was 0.88. With the current input value of 0.9, it will become the new maximum. After the transformation, its value will be scaled to 1.
+
+```{r}
+# Transform input values for v1 based on original and new max values
+input[1] <- sqrt(input[1])
+a <- min(sqrt(my.clean.data[,1]))
+b <- input[1]
+
+input[1] <- (input[1] - a) / (b - a)
+```
+
+For v2, the previous maximum value was 0.22. With the current input value of 0.65, it will become the new maximum. Since we performed a negation transformation on v2, its value after transformation will be scaled to 0.
+
+```{r}
+# Transform input values for v2 based on original and new values
+a <- min(my.clean.data[,2])
+b <- input[2]
+
+input[2] <- b - input[2] + a
+
+p <- input[2]
+q <- max(b - my.clean.data[,2] + a)
+
+input[2] <- (input[2] - p) / (q - p)
+```
+
+For v4, the previous minimum value was 2.87. With the current input value of 2.53, it will become the new minimum. Since we performed a negation transformation on v4, its value after transformation will be scaled to 1.
+
+```{r}
+# Transform input values for v4 based on original and new values
+
+a <- input[3]
+b <- max(my.clean.data[,4])
+
+input[3] <- b - input[3] + a
+
+p <- min(b - my.clean.data[,4] + a)
+q <- input[3]
+
+input[3] <- (input[3] - p) / (q - p)
+
+
+```
+
+For v5, the previous minimum value was 8. With the current input value of 7.1, it will become the new minimum. After transformation, its value will be scaled to 0.
+
+```{r}
+# Transform input values for v5 based on original and new values
+
+input[4] <- log(input[4])
+
+p <- input[4]
+q <- max(log(my.clean.data[,5]))
+
+input[4] <- (input[4] - p) / (q - p)
+
+
+```
+
+```{r}
+# Define weighted arithmetic mean function
+WAM <- function(x,w) {
+  sum(w*x)
+}
+
+# Predict wine quality using weighted arithmetic mean
+predicted_quality <- WAM(input, weights)
+```
+
+```{r}
+# Display the predicted wine quality
+predicted_quality
+```
+
+To calculate the descaled value:
+
+predicted_quality = 100((x - min(my.clean.data))/max(my.clean.data) - min(my.clean.data))
+
+This converts the scaled prediction back to its original value using the data's minimum and maximum.
+
+```{r}
+# Scale the predicted quality back to the original scale using a linear transformation.
+final_quality = (predicted_quality*(max(my.clean.data[,6]) - min(my.clean.data[,6]))) + min(my.clean.data[,6])
+
+final_quality
+```
+
+If we round off the calculated value, we obtain 4, which is our final prediction since the quality Y is represented by natural numbers.
+
+```{r}
+# Define the weights for the Choquet integral prediction
+weight_ch <- c(0.0303176054315142, 0.192043937251321, 0.400304054100361, 0.377334403217798)
+
+# Calculate the predicted quality using the Choquet integral weights
+predicted_quality_ch <- WAM(input, weight_ch)
+
+predicted_quality_ch
+
+```
+
+```{r}
+# Scale the Choquet predicted quality back to the original scale using a linear transformation
+final_quality_ch = (predicted_quality_ch*(max(my.clean.data[,6]) - min(my.clean.data[,6]))) + min(my.clean.data[,6])
+
+final_quality_ch
+```
+
+If we use the Choquet integral, the value of Y will be 5, as Y is represented by natural numbers.
+
+```{r}
+# Create a data frame to store various error measures for different variables
+error_measures <- data.frame(
+  Variable = c("v1", "v2", "v3", "v4", "v5"),
+  Euclidean = d1,
+  Manhattan = d2,
+  Pearson_Corr = d3,
+  Spearman_Corr = d4
+)
+```
+
+```{r}
+error_measures
+```
+
+```{r}
+# Summarize the results of different aggregation methods in a data frame
+summary_data <- data.frame(
+  Method = c("WAM", "WPM_0.5", "WPM_2", "OWA"),
+  w_1 = c(0.0503422399409097, 0.012740432700987, 0.0644962630227013, 0.522228560902366),
+  w_2 = c(0.186548389582131, 0.246066311981152, 0.0981843354549243, 0),
+  w_4 = c(0.206348661285815, 0.236139339571781, 0.202157669324695, 0.190954479618767),
+  w_5 = c(0.556760709191145, 0.505053915746081, 0.635161732197679, 0.286816959478866),
+  RMSE = c(0.138522221437187, 0.140393796857929, 0.13900033120051, 0.151411662267592),
+  Avg_Abs_Error = c(0.10566801830792, 0.106714429146799, 0.106272644420944, 0.120290480808855),
+  Pearson_Corr = c(0.54150854215859, 0.529902251251165, 0.534392471797902, 0.427478850094038),
+  Spearman_Corr = c(0.548645139273557, 0.537807084827823, 0.550020303803868, 0.410109511525505)
+)
+
+summary_data
+
+```
